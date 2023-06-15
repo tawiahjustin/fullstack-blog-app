@@ -1,5 +1,5 @@
 const express = require('express')
-
+const cookieParser = require('cookie-parser')
 require('dotenv').config({ path: './config/.env' })
 const cors = require('cors')
 const mongoose = require('mongoose')
@@ -15,12 +15,12 @@ const secret = 'j3bi749439hjf8hjfr39giru39h'
 app.use(
   cors({
     origin: 'http://localhost:3000',
-    methods: ['GET', 'PUT', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   })
 )
+
 app.use(express.json())
+app.use(cookieParser())
 mongoose
   .connect(process.env.DATABASE_URL, { useNewUrlParser: true })
   .then(() => {
@@ -57,13 +57,23 @@ app.post('/login', async (req, res) => {
     // login
     jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
       if (err) throw err
-      res.cookie('token', token).json('ok')
+      res.cookie('token', token).json({ id: userDoc._id, username })
     })
   } else {
     res.status(400).json('wrong credentials')
   }
 })
 
+app.get('/profile', (req, res) => {
+  const { token } = req.cookies
+  jwt.verify(token, secret, {}, (err, info) => {
+    if (err) throw err
+    res.json(info)
+  })
+})
+app.post('/logout', (req, res) => {
+  res.cookie('token', '').json('ok')
+})
 app.listen(4000, () => {
   console.log('Server started on port 4000')
 })
